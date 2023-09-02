@@ -1,0 +1,17 @@
+---
+mongodb_database_name: test_{{ ansible_hostname }}
+mongodb_database_user: "{{ mongodb_name }}_{{ ansible_hostname }}"
+mongodb_database_password: abcde$12345
+mongodb_data_dir: "/opt/{{ mongodb_name }}"
+mongodb_docker_image: mongo
+mongodb_docker_tag: 7
+mongodb_gid: 982
+mongodb_group: mongodb
+mongodb_name: "mongodb_{{ ansible_hostname }}"
+mongodb_root_user: mongoadmin
+mongodb_root_password: abcedf12345!
+mongodb_server_port: 27017
+mongodb_server_port_exposed: true
+mongodb_volumes:
+  - "{{ mongodb_data_dir }}:/data/db"
+  - "{{ mongodb_data_dir }}/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro"

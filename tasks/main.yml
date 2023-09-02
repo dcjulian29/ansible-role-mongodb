@@ -1,0 +1,54 @@
+---
+- name: Ensure MongoDB container group exists with correct gid
+  ansible.builtin.group:
+    gid: "{{ mongodb_gid }}"
+    name: "{{ mongodb_group }}"
+    state: present
+
+- name: Ensure MongoDB directories exist
+  ansible.builtin.file:
+    path: "{{ mongodb_data_dir }}"
+    state: directory
+    group: "{{ mongodb_gid }}"
+    mode: "0770"
+
+- name: Ensure DB initialization script is correct and in place
+  ansible.builtin.template:
+    src: "mongo-init.js.j2"
+    dest: "{{ mongodb_data_dir }}/monogo-init.js"
+    owner: root
+    group: "{{ mongodb_gid }}"
+    mode: "0640"
+
+- name: Pull MongoDB container image
+  community.docker.docker_image:
+    name: "{{ mongodb_docker_image }}"
+    source: pull
+    tag: "{{ mongodb_docker_tag }}"
+  notify: Remove MongoDB
+
+- name: Ensure all handlers run before continuing
+  ansible.builtin.meta: flush_handlers
+
+- name: Ensure MongoDB container is created
+  community.docker.docker_container:
+    container_default_behavior: no_defaults
+    detach: true
+    env:
+      MONGO_INITDB_DATABASE: "{{ mongodb_database_name }}"
+      MONGO_INITDB_ROOT_PASSWORD: "{{ mongodb_root_password }}"
+      MONGO_INITDB_ROOT_USERNAME: "{{ mongodb_root_user }}"
+    image: "{{ mongodb_docker_image }}:{{ mongodb_docker_tag }}"
+    interactive: false
+    labels: "{{ mongodb_labels | default(omit) }}"
+    name: "{{ mongodb_name }}"
+    published_ports: >-
+        {{
+          [ mongodb_server_port ~ ':6379' ]
+          if mongodb_server_port_exposed else omit
+        }}
+    restart_policy: always
+    state: present
+    volumes: "{{ mongodb_volumes }}"
+    user: "0:{{ mongodb_gid }}"
+  notify: Restart MongoDB
